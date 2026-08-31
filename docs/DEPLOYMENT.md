@@ -1,6 +1,20 @@
-# Deployment preflight
+# Deployment and release status
 
-This project is not deployed from this repository by Phase 4.6. The installed
+## Current production status
+
+The application is deployed on NitroCloud from the connected private GitHub
+repository. Production HTTPS and Auth0 OAuth/OIDC protection were manually
+verified. Anonymous MCP execution is rejected, while authenticated MCP
+initialization and tool discovery succeed.
+
+The production X integration currently uses app-only reads through
+`X_BEARER_TOKEN`. X user OAuth remains implemented but disabled/deferred, and
+no X write operation has been production-tested.
+
+## Phase 4.6 preflight record
+
+At the time of the Phase 4.6 preflight, this project was not yet deployed from
+the repository. The installed
 `@nitrostack/cli` 1.0.15 supports `build`, `start`, `dev`, `pack`, and project
 management commands, but it does not expose `login` or `deploy`.
 

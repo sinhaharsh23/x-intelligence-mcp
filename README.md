@@ -46,7 +46,7 @@ environment facility; never commit them. See
 
 - Native NitroStack MCP tools, resources, prompts, OAuth guard, health check, rate-limit tracking, retries, timeouts, caching for reads, and structured safe errors.
 - Official X API v2 account, post, relationship, likes, reposts, follows, post creation/deletion, and media upload/metadata integration.
-- Deterministic analytics and observed-topic intelligence. No AI SDK is included in this phase.
+- Deterministic analytics and observed-topic intelligence, plus optional grounded AI provider adapters for OpenAI, Groq, Gemini, and Anthropic.
 - Responsive dark/light NitroStack widgets with SDK-backed actions.
 
 ## Limitations
@@ -55,6 +55,9 @@ X access is credential- and plan-dependent. Recent search is bounded by the X AP
 
 See [docs/TOOLS.md](docs/TOOLS.md), [docs/WIDGETS.md](docs/WIDGETS.md), and [docs/X_API_CAPABILITIES.md](docs/X_API_CAPABILITIES.md).
 
-## Status
+## Production status
 
-Implemented — waiting for real X credential testing unless credentials are explicitly present in `.env`.
+The NitroCloud deployment and Auth0-protected MCP boundary have been manually
+verified in production. Real app-only X reads, Groq generation, and grounded
+X-to-Groq analysis are working. X user OAuth remains implemented but disabled
+and deferred; X write operations have not been production-tested.
