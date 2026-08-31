@@ -1,0 +1,24 @@
+{
+  "name": "x-intelligence-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A native NitroStack MCP server for secure X API intelligence.",
+  "scripts": {
+    "dev": "nitrostack-cli dev",
+    "dev:http": "npm run build && MCP_TRANSPORT_TYPE=dual PORT=3000 HOST=127.0.0.1 NODE_ENV=development node dist/index.js",
+    "build": "nitrostack-cli build",
+    "start": "npm run build && nitrostack-cli start",
+    "start:prod": "nitrostack-cli start",
+    "test": "npm run build && node --test --test-force-exit test/**/*.test.mjs",
+    "integration:smoke": "npm run build && node dist/integration/smoke.js",
+    "test:ai:integration": "npm run build && node scripts/test-ai-provider.mjs",
+    "test:e2e": "node scripts/test-e2e.mjs",
+    "widget:typecheck": "npm --prefix src/widgets exec tsc -- --noEmit",
+    "widget:build": "npm --prefix src/widgets run build",
+    "validate": "npm run build && npm run widget:typecheck && npm test"
+  },
+  "dependencies": { "@nitrostack/core": "^1.0.15", "@modelcontextprotocol/ext-apps": ">=0.1.0", "dotenv": "^16.3.1", "zod": "^3.22.4" },
+  "devDependencies": { "@nitrostack/cli": "^1.0.15", "@types/node": "^22.10.0", "typescript": "^5.3.3" },
+  "author": ""
+}

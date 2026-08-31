@@ -1,0 +1,1 @@
+export function analysisInstructions(task: string, request: string): string { return `Perform ${task} deterministically where possible and use the AI only for bounded interpretation. ${request} State limitations whenever the supplied sample is incomplete.`; }

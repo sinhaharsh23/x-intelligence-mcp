@@ -1,0 +1,22 @@
+{
+  "name": "X Intelligence MCP widgets",
+  "description": "Responsive NitroStack widgets for an independent X API integration.",
+  "widgets": [
+    { "uri": "/account-profile", "name": "Account profile", "description": "X account profile and actions", "tags": ["x", "account"] },
+    { "uri": "/post-card", "name": "Post card", "description": "An X post with engagement actions", "tags": ["x", "post"] },
+    { "uri": "/post-feed", "name": "Post feed", "description": "Paginated X post feed", "tags": ["x", "feed"] },
+    { "uri": "/search-dashboard", "name": "Search dashboard", "description": "Recent X search results and signals", "tags": ["x", "search"] },
+    { "uri": "/analytics-dashboard", "name": "Analytics dashboard", "description": "Derived X account analytics", "tags": ["x", "analytics"] },
+    { "uri": "/engagement-dashboard", "name": "Engagement dashboard", "description": "Derived engagement metrics", "tags": ["x", "analytics"] },
+    { "uri": "/trend-dashboard", "name": "Trend dashboard", "description": "Observed topic signals", "tags": ["x", "topics"] },
+    { "uri": "/mentions-dashboard", "name": "Mentions dashboard", "description": "Recent X mentions", "tags": ["x", "mentions"] },
+    { "uri": "/followers-dashboard", "name": "Followers dashboard", "description": "Followers and following profiles", "tags": ["x", "followers"] },
+    { "uri": "/composer", "name": "Composer", "description": "Explicit real X publishing UI", "tags": ["x", "write"] },
+    { "uri": "/thread-viewer", "name": "Thread viewer", "description": "X thread viewer", "tags": ["x", "thread"] },
+    { "uri": "/conversation-viewer", "name": "Conversation viewer", "description": "X conversation viewer", "tags": ["x", "conversation"] },
+    { "uri": "/account-comparison", "name": "Account comparison", "description": "Compare X accounts", "tags": ["x", "comparison"] },
+    { "uri": "/content-calendar", "name": "Content calendar", "description": "Posting activity visualization", "tags": ["x", "calendar"] },
+    { "uri": "/system-status", "name": "System status", "description": "MCP and X health", "tags": ["x", "status"] },
+    { "uri": "/authorization-status", "name": "Authorization status", "description": "Safe capabilities and auth state", "tags": ["x", "auth"] }
+  ]
+}

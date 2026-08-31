@@ -1,0 +1,21 @@
+import { Injectable } from '@nitrostack/core';
+import type { Post, UserProfile } from '../../common/types/x.js';
+import { AnalyticsService } from '../analytics/analytics.service.js';
+
+@Injectable({ deps: [AnalyticsService] })
+export class IntelligenceService {
+  constructor(private readonly analytics: AnalyticsService) {}
+
+  extractHashtags(posts: Post[]): Array<{ hashtag: string; count: number }> { return this.countValues(posts.flatMap((post) => post.hashtags.length ? post.hashtags : this.textHashtags(post.text))).map(({ value, count }) => ({ hashtag: value, count })); }
+  extractMentions(posts: Post[]): Array<{ mention: string; count: number }> { return this.countValues(posts.flatMap((post) => post.mentions.length ? post.mentions : this.textMentions(post.text))).map(({ value, count }) => ({ mention: value, count })); }
+  extractDomains(posts: Post[]): Array<{ domain: string; count: number }> { const urls = posts.flatMap((post) => post.urls ?? this.textUrls(post.text)); const domains = urls.map((url) => { try { return new URL(url).hostname.replace(/^www\./, '').toLowerCase(); } catch { return undefined; } }).filter((value): value is string => Boolean(value)); return this.countValues(domains).map(({ value, count }) => ({ domain: value, count })); }
+  keywordFrequency(posts: Post[]): Array<{ keyword: string; count: number }> { const stopWords = new Set(['about', 'after', 'again', 'also', 'been', 'being', 'from', 'have', 'into', 'just', 'more', 'most', 'only', 'over', 'that', 'their', 'there', 'they', 'this', 'what', 'when', 'where', 'which', 'with', 'your']); const words = posts.flatMap((post) => post.text.toLowerCase().match(/[a-z0-9][a-z0-9_-]{2,}/g) ?? []).filter((word) => !stopWords.has(word) && !word.startsWith('http')); return this.countValues(words).map(({ value, count }) => ({ keyword: value, count })); }
+  topicSignals(posts: Post[]) { return { label: 'Observed Topic Signals', sampleSize: posts.length, topHashtags: this.extractHashtags(posts).slice(0, 20), topMentions: this.extractMentions(posts).slice(0, 20), topDomains: this.extractDomains(posts).slice(0, 20), topKeywords: this.keywordFrequency(posts).slice(0, 20), topAuthors: this.topAuthors(posts), topPosts: this.analytics.topPosts(posts, 10), timeline: posts.map((post) => ({ postId: post.id, createdAt: post.createdAt, engagement: this.analytics.engagement(post) })) }; }
+  topAuthors(posts: Post[]) { const counts = new Map<string, { username: string; count: number; engagement: number }>(); for (const post of posts) { const key = post.author?.id ?? post.authorId ?? 'unknown'; const current = counts.get(key) ?? { username: post.author?.username ?? 'unknown', count: 0, engagement: 0 }; current.count += 1; current.engagement += this.analytics.engagement(post); counts.set(key, current); } return [...counts.values()].sort((a, b) => b.count - a.count || b.engagement - a.engagement).slice(0, 10); }
+  comparePosts(posts: Post[]) { return posts.map((post) => ({ postId: post.id, author: post.author?.username, text: post.text, metrics: post.metrics, totalEngagement: this.analytics.engagement(post) })).sort((a, b) => b.totalEngagement - a.totalEngagement); }
+  accountSummary(user: UserProfile, posts: Post[]) { return { user, sample: posts.length, metrics: user.publicMetrics, derived: this.analytics.profile(user, posts), topPosts: this.analytics.topPosts(posts, 5), observedHashtags: this.extractHashtags(posts).slice(0, 10), observedDomains: this.extractDomains(posts).slice(0, 10) }; }
+  private countValues(values: string[]): Array<{ value: string; count: number }> { const counts = new Map<string, number>(); for (const value of values) { const key = value.replace(/^[@#]/, '').toLowerCase(); if (key) counts.set(key, (counts.get(key) ?? 0) + 1); } return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([value, count]) => ({ value, count })); }
+  private textHashtags(text: string): string[] { return [...text.matchAll(/(?:^|\s)#([A-Za-z0-9_]+)/g)].map((match) => match[1]); }
+  private textMentions(text: string): string[] { return [...text.matchAll(/(?:^|\s)@([A-Za-z0-9_]{1,15})/g)].map((match) => match[1]); }
+  private textUrls(text: string): string[] { return [...text.matchAll(/https?:\/\/[^\s]+/g)].map((match) => match[0].replace(/[),.;!?]+$/, '')); }
+}
