@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTheme, useWidgetSDK } from '@nitrostack/widgets';
 
 type Dict = Record<string, unknown>;
@@ -15,6 +15,29 @@ function number(value: unknown): number { return typeof value === 'number' && Nu
 function string(value: unknown, fallback = ''): string { return typeof value === 'string' ? value : fallback; }
 function displayMetric(value: unknown): string { return typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString() : 'Unavailable'; }
 function metric(post: Post, key: string): string { return displayMetric(dict(post.metrics)[key]); }
+function hasHostValue(value: unknown): boolean { return value !== null && value !== undefined && (!(value && typeof value === 'object') || Object.keys(value as object).length > 0); }
+function useHostToolData() {
+  const sdk = useWidgetSDK();
+  const [legacyOutput, setLegacyOutput] = useState<unknown>(null);
+  const [legacyInput, setLegacyInput] = useState<unknown>(null);
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'TOOL_OUTPUT' && data.data !== undefined) setLegacyOutput(data.data);
+      if (data.type === 'NITRO_INJECT_OPENAI') {
+        const globals = dict(data.data ?? data.openai);
+        if (globals.toolOutput !== undefined) setLegacyOutput(globals.toolOutput);
+        if (globals.toolInput !== undefined) setLegacyInput(globals.toolInput);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+  const sdkOutput = sdk.getToolOutput<unknown>();
+  const sdkInput = sdk.getToolInput<unknown>();
+  return { sdk, output: hasHostValue(sdkOutput) ? sdkOutput : legacyOutput, input: hasHostValue(sdkInput) ? sdkInput : legacyInput };
+}
 function unwrapToolResult(value: unknown): Dict {
   const outer = dict(value);
   const structured = dict(outer.structuredContent);
@@ -62,10 +85,11 @@ export function WidgetFrame({ title, eyebrow, children }: { title: string; eyebr
 }
 
 export function WidgetData({ title, render }: { title: string | ((data: Dict, input: Dict) => string); render: (data: Dict, callTool: ToolCall, openExternal: ExternalOpen, toolInput: Dict) => React.ReactNode }) {
-  const { isReady, getToolOutput, getToolInput, callTool: rawCallTool, openExternal: rawOpenExternal } = useWidgetSDK();
+  const { sdk, output: hostOutput, input: hostInput } = useHostToolData();
+  const { isReady, callTool: rawCallTool, openExternal: rawOpenExternal } = sdk;
   const actions = useSafeActions(rawCallTool, rawOpenExternal);
-  const output = getToolOutput<unknown>();
-  const toolInput = dict(getToolInput<unknown>());
+  const output = hostOutput;
+  const toolInput = dict(hostInput);
   const fallbackTitle = typeof title === 'string' ? title : 'X Intelligence MCP';
   if (!isReady) return <WidgetFrame title={fallbackTitle}><div className="x-state"><span className="x-spinner" />Connecting to MCP…</div></WidgetFrame>;
   if (!output) return <WidgetFrame title={fallbackTitle}><div className="x-state"><div className="x-state-icon">◌</div><strong>Waiting for X data</strong><span>Run the linked MCP tool to populate this widget.</span></div></WidgetFrame>;
@@ -118,11 +142,12 @@ export function MentionsDashboardWidget() { return <PostFeedWidget/>; }
 export function FollowersDashboardWidget() { return <WidgetData title="Followers" render={(data, callTool) => { const users = list(data.data ?? data.followers); return users.length ? <div className="x-stack">{users.map((item, index) => { const user = dict(item); return <div className="x-card x-user-row" key={string(user.id, String(index))}><div className="x-avatar">{string(user.name, 'X').slice(0, 1)}</div><div><b>{string(user.name, 'Unknown')}</b><div className="x-muted">@{string(user.username, 'unknown')}</div></div><Button onClick={() => void callTool('x_get_user', { id: string(user.id) })}>View</Button></div>; })}</div> : <Empty text="No accounts in this page."/>; }}/>; }
 
 export function ComposerWidget() {
-  const sdk = useWidgetSDK();
+  const { sdk, output: hostOutput, input: hostInput } = useHostToolData();
   const { callTool: rawCallTool, openExternal: rawOpenExternal } = sdk;
   const { callTool, status: actionStatus, busy } = useSafeActions(rawCallTool, rawOpenExternal);
-  const toolInput = dict(sdk.getToolInput<unknown>());
-  const toolOutput = unwrapToolResult(sdk.getToolOutput<unknown>());
+  const toolInput = dict(hostInput);
+  const rawToolOutput = hostOutput;
+  const toolOutput = unwrapToolResult(rawToolOutput);
   const isDraftResult = typeof toolOutput.draft === 'string' || typeof toolOutput.improvedDraft === 'string';
   const threadPosts = list(toolOutput.posts);
   const isThreadResult = threadPosts.length > 0 && threadPosts.every((post) => typeof dict(post).draft === 'string');
@@ -134,6 +159,7 @@ export function ComposerWidget() {
   const [aiStatus, setAiStatus] = useState('');
   const valid = text.trim().length > 0 && text.length <= 280;
   if (!sdk.isReady) return <WidgetFrame title="AI Post Generator"><div className="x-state"><span className="x-spinner" />Connecting to MCP…</div></WidgetFrame>;
+  if (isAIError(toolOutput)) return <WidgetFrame title="AI Post Generator"><AIGenerationState data={toolOutput} input={toolInput} callTool={callTool}/></WidgetFrame>;
   if (isDraftResult) { const data = typeof toolOutput.draft === 'string' ? toolOutput : { ...toolOutput, draft: toolOutput.improvedDraft }; return <WidgetFrame title={draftTitle} eyebrow="DRAFT ONLY — NOTHING IS PUBLISHED AUTOMATICALLY"><AIPostDraftPanel data={data} callTool={callTool}/></WidgetFrame>; }
   if (isThreadResult) return <WidgetFrame title="AI Thread Generator" eyebrow="DRAFT ONLY — NOTHING IS PUBLISHED AUTOMATICALLY"><AIThreadDraftPanel data={toolOutput}/></WidgetFrame>;
   const generateDraft = async () => { setAiStatus('Generating draft…'); const result = unwrapToolResult(await callTool('x_generate_post', { topic: text.trim() || 'a useful update', goal: 'clear and useful', tone: 'clear and useful' })); const draft = string(result.draft); if (draft) { setText(draft); setStage('draft'); setConfirmed(false); setAiStatus('AI draft inserted. Review it before publishing.'); } else setAiStatus(string(result.message, 'AI draft unavailable.')); };
@@ -142,7 +168,16 @@ export function ComposerWidget() {
   return <WidgetFrame title="Compose post" eyebrow="EXPLICIT REAL X ACCOUNT ACTION"><div className="x-card"><div className="x-pill">{stage === 'draft' ? '1 · Draft' : stage === 'review' ? '2 · Review' : '3 · Confirm'}</div><textarea aria-label="Post draft" value={text} onChange={(event) => { setText(event.target.value); setStatus(''); setAiStatus(''); setStage('draft'); setConfirmed(false); }} placeholder="Write a draft…" maxLength={280}/><div className="x-actions"><Button disabled={busy} onClick={() => void generateDraft()}>Generate draft</Button><Button disabled={!valid || busy} onClick={() => void improveDraft()}>Improve draft</Button></div><div className="x-compose-footer"><span className={text.length > 280 ? 'x-count x-over' : 'x-count'}>{text.length}/280</span>{stage === 'draft' && <Button disabled={!valid} onClick={() => setStage('review')}>Review draft</Button>}{stage === 'review' && <><Button onClick={() => setStage('draft')}>Back</Button><Button disabled={!valid} onClick={() => setStage('confirm')}>Continue to confirm</Button></>}{stage === 'confirm' && <><Button onClick={() => setStage('review')}>Back</Button><label className="x-confirm-label"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)}/> I confirm this will publish to X.</label><Button disabled={!confirmed || busy} onClick={() => void publish()}>Publish</Button></>}</div>{stage !== 'draft' && <section className="x-card x-review"><div className="x-section-title">Final review</div><p className="x-post-text">{text.trim()}</p></section>}<p className="x-note">AI actions only insert drafts. Publishing is never automatic. The final tool call requires confirm=true and affects the configured real X account.</p>{aiStatus && <p role="status" className="x-note">{aiStatus}</p>}{status && <p role="status" className="x-note">{status}</p>}{actionStatus && <p role="status" className="x-note">{actionStatus}</p>}</div></WidgetFrame>;
 }
 
-function AIPostDraftPanel({ data, callTool }: { data: Dict; callTool: ToolCall }) { const [draft, setDraft] = useState(string(data.draft)); const [status, setStatus] = useState(''); const [busy, setBusy] = useState(false); const copyDraft = async () => { try { await navigator.clipboard.writeText(draft); setStatus('Draft copied.'); } catch { setStatus('Copy is unavailable in this host.'); } }; const improveDraft = async () => { setBusy(true); setStatus('Improving draft…'); try { const result = unwrapToolResult(await callTool('x_improve_post', { text: draft, suggestHashtags: true })); if (typeof result.improvedDraft === 'string') { setDraft(result.improvedDraft); setStatus('Improved draft ready for review.'); } else setStatus(string(result.message, 'Improvement unavailable.')); } finally { setBusy(false); } }; return <section className="x-stack"><div className="x-card x-review"><div className="x-section-title">Generated draft</div><p className="x-post-text">{draft || 'No draft returned.'}</p><div className="x-grid"><Stat label="Characters" value={draft.length}/><Stat label="Provider" value={string(data.provider, 'Unavailable')}/><Stat label="Model" value={string(data.model, 'Unavailable')}/><Stat label="Grounded" value={data.grounded === true ? 'Yes' : 'No'}/><Stat label="Source" value={string(data.sourceType, 'user_input')}/></div></div><div className="x-actions"><Button disabled={!draft || busy} onClick={() => void copyDraft()}>Copy draft</Button><Button disabled={!draft || busy} onClick={() => void improveDraft()}>Improve draft</Button></div><section className="x-card"><div className="x-section-title">Rationale</div><p>{string(data.rationale, 'No rationale returned.')}</p></section><TextList title="Suggested hashtags" values={list(data.suggestedHashtags)}/><TextList title="Warnings" values={list(data.warnings)}/>{status && <p role="status" className="x-note">{status}</p>}<p className="x-note">This is a draft only. Publishing is not available from x_generate_post.</p></section>; }
+const AI_ERROR_CODES = new Set(['AI_DISABLED', 'AI_NOT_CONFIGURED', 'AI_PROVIDER_UNAVAILABLE', 'AI_PROVIDER_AUTH_ERROR', 'AI_RATE_LIMITED', 'AI_TIMEOUT', 'AI_BAD_RESPONSE', 'AI_RESPONSE_INVALID', 'AI_CONTEXT_TOO_LARGE', 'AI_SAFETY_REFUSAL', 'AI_GROUNDING_FAILED']);
+function isAIError(data: Dict): boolean { return data.ok === false || typeof data.code === 'string' && AI_ERROR_CODES.has(data.code); }
+function AIGenerationState({ data, input, callTool }: { data: Dict; input: Dict; callTool: ToolCall }) {
+  const code = string(data.code, 'AI_UNAVAILABLE');
+  const rateLimited = code === 'AI_RATE_LIMITED';
+  const title = rateLimited ? 'Generation rate limited' : code === 'AI_DISABLED' ? 'AI is disabled' : code === 'AI_NOT_CONFIGURED' ? 'AI provider not configured' : code === 'AI_RESPONSE_INVALID' ? 'Provider returned an invalid response' : 'AI generation unavailable';
+  const message = rateLimited ? 'Groq temporarily rate-limited this request. Wait for the provider window to reset, then retry.' : string(data.message, 'The AI draft could not be generated.');
+  return <div className="x-state x-state-error"><div className="x-state-icon">!</div><strong>{title}</strong><span>{message}</span>{rateLimited && <span className="x-note">No draft was fabricated. Retry explicitly when the provider is available.</span>}{string(input.topic) && <Button onClick={() => void callTool('x_generate_post', input)}>Retry generation</Button>}<span className="x-note">State: {code}. No X publication was attempted.</span></div>;
+}
+function AIPostDraftPanel({ data, callTool }: { data: Dict; callTool: ToolCall }) { const [draft, setDraft] = useState(string(data.draft)); const [status, setStatus] = useState(''); const [busy, setBusy] = useState(false); const copyDraft = async () => { try { await navigator.clipboard.writeText(draft); setStatus('Draft copied.'); } catch { setStatus('Copy is unavailable in this host.'); } }; const improveDraft = async () => { setBusy(true); setStatus('Improving draft…'); try { const result = unwrapToolResult(await callTool('x_improve_post', { text: draft, suggestHashtags: true })); if (typeof result.improvedDraft === 'string') { setDraft(result.improvedDraft); setStatus('Improved draft ready for review.'); } else setStatus(string(result.message, 'Improvement unavailable.')); } finally { setBusy(false); } }; return <section className="x-stack"><div className="x-card x-review"><div className="x-section-title">Generated draft</div><p className="x-post-text">{draft || 'No draft returned.'}</p><div className="x-grid"><Stat label="Characters" value={typeof data.characterCount === 'number' ? data.characterCount : draft.length}/><Stat label="Provider" value={string(data.provider, 'Unavailable')}/><Stat label="Model" value={string(data.model, 'Unavailable')}/><Stat label="Grounded" value={data.grounded === true ? 'Yes' : 'No'}/><Stat label="Source" value={string(data.sourceType, 'user_input')}/></div></div><div className="x-actions"><Button disabled={!draft || busy} onClick={() => void copyDraft()}>Copy draft</Button><Button disabled={!draft || busy} onClick={() => void improveDraft()}>Improve draft</Button></div><section className="x-card"><div className="x-section-title">Rationale</div><p>{string(data.rationale, 'No rationale returned.')}</p></section><TextList title="Suggested hashtags" values={list(data.suggestedHashtags)}/><TextList title="Warnings" values={list(data.warnings)}/>{status && <p role="status" className="x-note">{status}</p>}<p className="x-note">This is a draft only. Publishing is not available from x_generate_post.</p></section>; }
 function AIThreadDraftPanel({ data }: { data: Dict }) { const posts = list(data.posts); return <section className="x-stack">{posts.map((item, index) => { const post = dict(item); const draft = string(post.draft); return <section className="x-card x-review" key={index}><div className="x-section-title">Post {index + 1} · {draft.length} characters</div><p className="x-post-text">{draft}</p></section>; })}<section className="x-card"><div className="x-section-title">Thread summary</div><p>{string(data.summary, 'No summary returned.')}</p></section><TextList title="Warnings" values={list(data.warnings)}/><p className="x-note">Thread output is draft-only and is not published automatically.</p></section>; }
 function CapabilityRow({ label, available, write = false }: { label: string; available: unknown; write?: boolean }) { const enabled = available === true; return <div className="x-metric-list"><div><span>{label}</span><b>{enabled ? (write ? 'Write available' : 'Read available') : (write ? 'Write unavailable' : 'Unavailable')}</b></div></div>; }
 function CapabilityPanel({ data }: { data: Dict }) { const authorization = dict(data.authorization); const readAccess = authorization.readAccess === true || data.readProfile === true || data.searchPosts === true; const writeAccess = authorization.writeAccess === true || data.createPost === true || data.deletePost === true || data.likePost === true || data.followUser === true || data.mediaUpload === true; return <section className="x-stack"><div className="x-card x-status-card"><span className={readAccess ? 'x-status-dot' : 'x-status-dot x-status-warn'}/><b>Capability / Authorization status</b><p>Read and write capabilities are derived from the current X credentials and authorization state.</p><div className="x-grid"><Stat label="Authentication mode" value={string(data.authenticationMode, 'none')}/><Stat label="X auth enabled" value={data.xAuthEnabled === true ? 'Yes' : 'No'}/><Stat label="Read access" value={readAccess ? 'Yes' : 'No'}/><Stat label="Write access" value={writeAccess ? 'Yes' : 'No'}/><Stat label="Authenticated" value={authorization.authenticated === true ? 'Yes' : 'No'}/><Stat label="OAuth configured" value={authorization.oauthConfigured === true ? 'Yes' : 'No'}/></div></div><section className="x-card"><div className="x-section-title">Read capabilities</div><CapabilityRow label="Profile lookup" available={data.readProfile}/><CapabilityRow label="Search posts" available={data.searchPosts}/><CapabilityRow label="Followers" available={data.readFollowers}/><CapabilityRow label="Following" available={data.readFollowing}/><CapabilityRow label="Mentions" available={data.readMentions}/></section><section className="x-card"><div className="x-section-title">Write capabilities</div><CapabilityRow label="Create post" available={data.createPost} write/><CapabilityRow label="Delete post" available={data.deletePost} write/><CapabilityRow label="Like post" available={data.likePost} write/><CapabilityRow label="Follow user" available={data.followUser} write/><CapabilityRow label="Media upload" available={data.mediaUpload} write/></section><p className="x-note">{writeAccess ? 'Write access is available only through explicit confirmation.' : 'READ AVAILABLE · WRITE UNAVAILABLE. X user OAuth is not connected.'}</p></section>; }

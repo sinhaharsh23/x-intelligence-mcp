@@ -24,7 +24,12 @@ export class AIService {
       for (const provider of providers) {
         try {
           const generated = await provider.generateStructured({ systemPrompt: AI_SYSTEM_PROMPT, userPrompt: jsonTask(input.task, input.instructions, grounding.prompt), maxOutputTokens: config.AI_MAX_OUTPUT_TOKENS }, input.schema);
-          const value = generated.value as T & Record<string, unknown>;
+          const value = { ...(generated.value as T & Record<string, unknown>) };
+          const valueRecord = value as Record<string, unknown>;
+          // Character count is deterministic presentation metadata. Providers may
+          // omit this optional field even when the draft itself is valid.
+          if (typeof valueRecord.draft === 'string' && typeof valueRecord.characterCount !== 'number') valueRecord.characterCount = valueRecord.draft.length;
+          if (typeof valueRecord.improvedDraft === 'string' && typeof valueRecord.characterCount !== 'number') valueRecord.characterCount = valueRecord.improvedDraft.length;
           return { ...value, grounded: true, sourceType: grounding.sourceType, sourceCount: grounding.sourceCount, sourceChars: grounding.sourceChars, provider: generated.result.provider, model: generated.result.model, generatedAt: new Date().toISOString() };
         } catch (error) {
           lastError = error;

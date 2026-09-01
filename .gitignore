@@ -62,3 +62,4 @@ tokens.json
 
 # Added by nitrostack pack
 .git/
+.nitrostudio/
