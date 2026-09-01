@@ -1,6 +1,6 @@
 import { Cache, ExecutionContext, RateLimit, ToolDecorator as Tool, UseGuards, Widget, z, Injectable } from '@nitrostack/core';
 import { OAuthGuard } from '../../guards/oauth.guard.js';
-import { paginationSchema, usernameSchema, userIdSchema } from './x.schemas.js';
+import { paginationSchema, usernameSchema, userIdSchema, userLookupSchema } from './x.schemas.js';
 import { XService } from './x.service.js';
 
 @Injectable({ deps: [XService] })
@@ -13,7 +13,7 @@ export class XAccountTools {
   @Widget('account-profile')
   async getMyProfile(_input: Record<string, never>, _ctx: ExecutionContext) { return this.x.getMe(); }
 
-  @Tool({ name: 'x_get_user', description: 'Look up an X user by numeric ID or exact username.', inputSchema: z.union([z.object({ id: userIdSchema }), z.object({ username: usernameSchema })]), annotations: { readOnlyHint: true, openWorldHint: true } })
+  @Tool({ name: 'x_get_user', description: 'Look up an X user by numeric ID or exact username.', inputSchema: userLookupSchema, annotations: { readOnlyHint: true, openWorldHint: true } })
   @UseGuards(OAuthGuard)
   @RateLimit({ requests: 60, window: '1m' })
   @Widget('account-profile')

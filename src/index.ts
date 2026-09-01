@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import 'dotenv/config';
+import './common/config/load-env.js';
 import { McpApplicationFactory } from '@nitrostack/core';
 import { AppModule } from './app.module.js';
 import { assertProductionSecurity } from './common/config/production-security.js';
@@ -8,7 +8,9 @@ import { getConfig } from './common/config/env.js';
 async function bootstrap(): Promise<void> {
   try {
     console.error('Starting X Intelligence MCP 1.0.0');
-    assertProductionSecurity(getConfig());
+    const config = getConfig();
+    console.error(`NITROSTUDIO_CONFIG::DEMO_CANVAS_MODE=${config.DEMO_CANVAS_MODE}`);
+    assertProductionSecurity(config);
     const server = await McpApplicationFactory.create(AppModule);
     await server.start();
   } catch (error) {

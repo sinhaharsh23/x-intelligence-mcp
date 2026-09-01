@@ -2,6 +2,7 @@
   "name": "X Intelligence MCP widgets",
   "description": "Responsive NitroStack widgets for an independent X API integration.",
   "widgets": [
+    { "uri": "/dashboard", "name": "MCP Command Center", "description": "Interactive 3D X Intelligence MCP presentation canvas", "tags": ["mcp", "presentation", "x"] },
     { "uri": "/account-profile", "name": "Account profile", "description": "X account profile and actions", "tags": ["x", "account"] },
     { "uri": "/post-card", "name": "Post card", "description": "An X post with engagement actions", "tags": ["x", "post"] },
     { "uri": "/post-feed", "name": "Post feed", "description": "Paginated X post feed", "tags": ["x", "feed"] },

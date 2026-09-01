@@ -23,6 +23,7 @@ const environmentSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   HOST: optionalString,
   MCP_TRANSPORT_TYPE: z.enum(['stdio', 'http', 'dual']).default('dual'),
+  DEMO_CANVAS_MODE: booleanFlag,
   APP_BASE_URL: optionalUrl,
   RESOURCE_URI: optionalUrl,
   AUTH_SERVER_URL: optionalUrl,

@@ -6,6 +6,8 @@ export interface AIRequest {
   systemPrompt: string;
   userPrompt: string;
   maxOutputTokens: number;
+  /** Internal schema hint used by providers that support native structured output. */
+  responseSchema?: z.ZodType<unknown>;
 }
 
 export interface AIProviderResult {

@@ -20,10 +20,21 @@ export class XService {
 
   @Cache({ ttl: 30, key: (input) => `x:user:${JSON.stringify(input)}` })
   async getUser(input: { id?: string; username?: string }): Promise<UserProfile> {
-    const path = input.id ? `/2/users/${encodeURIComponent(input.id)}` : `/2/users/by/username/${encodeURIComponent(input.username ?? '')}`;
+    if (input.id && !/^\d+$/.test(input.id)) throw new XIntelligenceError('INVALID_REQUEST', 'id must be a numeric X user ID. Use the username field for handles.');
+    const username = input.username?.trim().replace(/^@/, '');
+    const path = input.id ? `/2/users/${encodeURIComponent(input.id)}` : `/2/users/by/username/${encodeURIComponent(username ?? '')}`;
     const response = await this.client.request<XUserRaw>(path, { query: { 'user.fields': USER_FIELDS } });
     if (!response.data) throw new XIntelligenceError('NOT_FOUND', 'X user was not found.');
     return this.normalizeUser(response.data);
+  }
+
+  async resolveUserId(input: { userId?: string; username?: string }): Promise<string> {
+    if (input.userId) {
+      if (!/^\d+$/.test(input.userId)) throw new XIntelligenceError('INVALID_REQUEST', 'userId must be a numeric X user ID. Use the username field for handles.');
+      return input.userId;
+    }
+    if (input.username) return (await this.getUser({ username: input.username })).id;
+    throw new XIntelligenceError('INVALID_REQUEST', 'Provide a username or numeric userId.');
   }
 
   async getMe(): Promise<UserProfile> {

@@ -14,11 +14,14 @@
     "integration:smoke": "npm run build && node dist/integration/smoke.js",
     "test:ai:integration": "npm run build && node scripts/test-ai-provider.mjs",
     "test:e2e": "node scripts/test-e2e.mjs",
+    "test:nitrostudio": "npm run build && node scripts/test-nitrostudio-demo.mjs",
+    "test:nitrostudio-demo": "npm run test:nitrostudio",
+    "verify:demo-tools": "npm run build && node scripts/verify-demo-tools.mjs",
     "widget:typecheck": "npm --prefix src/widgets exec tsc -- --noEmit",
     "widget:build": "npm --prefix src/widgets run build",
     "validate": "npm run build && npm run widget:typecheck && npm test"
   },
-  "dependencies": { "@nitrostack/core": "^1.0.15", "@modelcontextprotocol/ext-apps": ">=0.1.0", "dotenv": "^16.3.1", "zod": "^3.22.4" },
+  "dependencies": { "@nitrostack/core": "^1.0.15", "@modelcontextprotocol/ext-apps": ">=0.1.0", "dotenv": "^16.3.1", "zod": "^3.22.4", "zod-to-json-schema": "^3.25.2" },
   "devDependencies": { "@nitrostack/cli": "^1.0.15", "@types/node": "^22.10.0", "typescript": "^5.3.3" },
   "author": ""
 }

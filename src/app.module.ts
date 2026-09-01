@@ -5,6 +5,9 @@ import { XModule } from './modules/x/x.module.js';
 import { XOAuthModule } from './modules/x/x-oauth.module.js';
 import { SystemHealthCheck } from './health/system.health.js';
 import { AIModule } from './modules/ai/ai.module.js';
+import { DemoModule } from './modules/demo/demo.module.js';
+
+const demoCanvasMode = process.env.DEMO_CANVAS_MODE === 'true';
 
 @McpApp({
   module: AppModule,
@@ -28,11 +31,9 @@ import { AIModule } from './modules/ai/ai.module.js';
       audience: process.env.TOKEN_AUDIENCE,
       issuer: process.env.TOKEN_ISSUER,
     }),
-    XModule,
-    XOAuthModule.forRoot(),
-    AnalyticsModule,
-    IntelligenceModule,
-    AIModule,
+    ...(demoCanvasMode
+      ? [DemoModule]
+      : [XModule, XOAuthModule.forRoot(), AnalyticsModule, IntelligenceModule, AIModule]),
   ],
   providers: [SystemHealthCheck],
 })

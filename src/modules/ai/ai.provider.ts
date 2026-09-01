@@ -19,10 +19,10 @@ export abstract class HttpAIProvider implements AIProvider {
   }
 
   async generateStructured<T>(request: AIRequest, schema: z.ZodType<T>): Promise<{ value: T; result: AIProviderResult }> {
-    const result = await this.generate(request);
-    const parsed = parseJson(result.text);
+    const result = await this.generate({ ...request, responseSchema: schema as z.ZodType<unknown> });
+    const parsed = normalizeNullableValues(parseJson(result.text));
     const validation = schema.safeParse(parsed);
-    if (!validation.success) throw new AIIntelligenceError('AI_RESPONSE_INVALID', 'The selected AI provider returned an invalid structured response.', false, { issueCount: validation.error.issues.length, issuePaths: validation.error.issues.map((issue) => issue.path.join('.')).slice(0, 20) });
+    if (!validation.success) throw new AIIntelligenceError('AI_RESPONSE_INVALID', 'The selected AI provider returned an invalid structured response.', false, { issueCount: validation.error.issues.length, issuePaths: validation.error.issues.map((issue) => issue.path.join('.')).slice(0, 20), issueCodes: validation.error.issues.map((issue) => issue.code).slice(0, 20), receivedTypes: validation.error.issues.map((issue) => 'received' in issue ? typeof issue.received : undefined).slice(0, 20) });
     return { value: validation.data, result };
   }
 
@@ -49,6 +49,14 @@ export abstract class HttpAIProvider implements AIProvider {
   }
 }
 
+/** Native strict JSON schemas represent optional/default fields as nullable. */
+function normalizeNullableValues(value: unknown): unknown {
+  if (value === null) return undefined;
+  if (Array.isArray(value)) return value.map((item) => normalizeNullableValues(item));
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, normalizeNullableValues(child)]));
+  return value;
+}
+
 function parseJson(text: string): unknown {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   try { return JSON.parse(cleaned); } catch { throw new AIIntelligenceError('AI_RESPONSE_INVALID', 'The AI provider returned malformed JSON.', false); }
@@ -63,6 +71,7 @@ function providerHttpError(provider: AIProviderId, status: number, payload: Reco
   if (status === 401 || status === 403) return new AIIntelligenceError('AI_PROVIDER_AUTH_ERROR', `${provider} rejected the configured credentials.`, false, details);
   if (status === 429) return new AIIntelligenceError('AI_RATE_LIMITED', `${provider} rate limit reached.`, true, details);
   if (status === 413) return new AIIntelligenceError('AI_CONTEXT_TOO_LARGE', `${provider} rejected the request because the context is too large.`, false, details);
+  if (providerError.code === 'json_validate_failed') return new AIIntelligenceError('AI_RESPONSE_INVALID', `${provider} returned structured output that did not satisfy the requested schema.`, false, details);
   if (status >= 500) return new AIIntelligenceError('AI_PROVIDER_UNAVAILABLE', `${provider} is temporarily unavailable.`, true, details);
   return new AIIntelligenceError('AI_BAD_RESPONSE', safeMessage, false, details);
 }

@@ -1,9 +1,12 @@
 import { z } from 'zod';
 
-export const userIdSchema = z.string().regex(/^\d+$/, 'User ID must contain digits only.');
+export const userIdSchema = z.string().regex(/^\d+$/, 'userId must be a numeric X user ID. Use the username field for handles.');
 export const postIdSchema = z.string().regex(/^\d+$/, 'Post ID must contain digits only.');
 export const usernameSchema = z.string().trim().regex(/^@?[A-Za-z0-9_]{1,15}$/, 'Username must be 1–15 letters, numbers, or underscores.').transform((value) => value.replace(/^@/, ''));
+export const userLookupSchema = z.object({ id: userIdSchema.optional(), username: usernameSchema.optional() }).refine((value) => Boolean(value.id) !== Boolean(value.username), 'Provide exactly one of id or username.');
 export const paginationSchema = z.object({ maxResults: z.number().int().min(10).max(100).default(25), paginationToken: z.string().max(512).optional() });
+export const userReferenceSchema = z.object({ userId: userIdSchema.optional(), username: usernameSchema.optional() }).refine((value) => Boolean(value.userId) !== Boolean(value.username), 'Provide exactly one of userId or username.');
+export const userPaginationSchema = z.object({ userId: userIdSchema.optional(), username: usernameSchema.optional(), maxResults: z.number().int().min(10).max(100).default(25), paginationToken: z.string().max(512).optional() }).refine((value) => Boolean(value.userId) !== Boolean(value.username), 'Provide exactly one of userId or username.');
 export const dateRangeSchema = z.object({ startTime: z.string().datetime().optional(), endTime: z.string().datetime().optional() }).refine((value) => !value.startTime || !value.endTime || value.startTime <= value.endTime, 'startTime must be before endTime.');
 export const searchSchema = z.object({
   query: z.string().trim().min(1).max(512),

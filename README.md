@@ -31,6 +31,20 @@ npm run integration:smoke
 npm run test:e2e
 ```
 
+For a NitroStudio presentation, use the curated demo surface:
+
+```bash
+DEMO_CANVAS_MODE=true npm run dev
+```
+
+`DEMO_CANVAS_MODE=false` is the default and preserves the complete production
+registration. With demo mode enabled, NitroStack registers only a presentation
+subset (30 Canvas-visible tools/resources/prompts or fewer), including the
+real X read tools and the configured AI draft tools. The widgets use
+NitroStack's `WidgetLayout` and `useWidgetSDK()` host bridge for follow-up tool
+calls and external navigation; they do not connect directly to `/mcp`. AI
+actions remain draft-only and no write tools are registered in demo mode.
+
 `integration:smoke` is read-only. It requires explicit credentials and never creates a post. Writes are only made by explicit MCP tool invocation.
 
 Before any public deployment, set `OAUTH_REQUIRED=true` and configure the
