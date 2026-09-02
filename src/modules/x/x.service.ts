@@ -4,6 +4,7 @@ import { XIntelligenceError } from '../../common/errors/x-errors.js';
 import type { CapabilityState, Pagination, Post, RateLimitState, UserProfile, XApiEnvelope, XIncludes, XPostRaw, XUserRaw } from '../../common/types/x.js';
 import { XApiClient } from './x.client.js';
 import { XOAuthTokenStore } from './x-oauth.store.js';
+import { normalizeUsername } from './x.schemas.js';
 
 type HttpMethod = 'GET' | 'POST' | 'DELETE' | 'PUT';
 
@@ -18,10 +19,10 @@ export class XService {
 
   constructor(tokenStore = new XOAuthTokenStore()) { this.client = new XApiClient(getConfig(), tokenStore); }
 
-  @Cache({ ttl: 30, key: (input) => `x:user:${JSON.stringify(input)}` })
+  @Cache({ ttl: 30, key: userLookupCacheKey })
   async getUser(input: { id?: string; username?: string }): Promise<UserProfile> {
     if (input.id && !/^\d+$/.test(input.id)) throw new XIntelligenceError('INVALID_REQUEST', 'id must be a numeric X user ID. Use the username field for handles.');
-    const username = input.username?.trim().replace(/^@/, '');
+    const username = input.username === undefined ? undefined : normalizeUsername(input.username);
     const path = input.id ? `/2/users/${encodeURIComponent(input.id)}` : `/2/users/by/username/${encodeURIComponent(username ?? '')}`;
     const response = await this.client.request<XUserRaw>(path, { query: { 'user.fields': USER_FIELDS } });
     if (!response.data) throw new XIntelligenceError('NOT_FOUND', 'X user was not found.');
@@ -249,6 +250,15 @@ export class XService {
   private normalizeList<T, R>(response: XApiEnvelope<T[]>, mapper: (item: T, includes?: XIncludes) => R): Pagination<R> { return { data: (response.data ?? []).map((item) => mapper(item, response.includes)), pagination: { resultCount: response.meta?.result_count ?? response.data?.length ?? 0, nextToken: response.meta?.next_token, previousToken: response.meta?.previous_token } }; }
   private normalizeUser(user: XUserRaw): UserProfile { return { id: user.id, name: user.name, username: user.username, bio: user.description, createdAt: user.created_at, verified: user.verified, verifiedType: user.verified_type, avatarUrl: user.profile_image_url, protected: user.protected, location: user.location, publicMetrics: user.public_metrics ? { followers: user.public_metrics.followers_count, following: user.public_metrics.following_count, posts: user.public_metrics.tweet_count, listed: user.public_metrics.listed_count } : undefined }; }
   private normalizePost(post: XPostRaw, includes?: XIncludes): Post { const author = includes?.users?.find((user) => user.id === post.author_id); const mediaKeys = new Set(post.attachments?.media_keys ?? []); const textHashtags = [...post.text.matchAll(/(?:^|\s)#([A-Za-z0-9_]+)/g)].map((match) => match[1]); const textMentions = [...post.text.matchAll(/(?:^|\s)@([A-Za-z0-9_]{1,15})/g)].map((match) => match[1]); const textUrls = [...post.text.matchAll(/https?:\/\/[^\s]+/g)].map((match) => match[0].replace(/[),.;!?]+$/, '')); return { id: post.id, text: post.text, authorId: post.author_id, author: author ? this.normalizeUser(author) : undefined, createdAt: post.created_at, conversationId: post.conversation_id, language: post.lang, referencedPosts: post.referenced_tweets, media: (includes?.media ?? []).filter((media) => media.media_key && mediaKeys.has(media.media_key)), metrics: { likes: post.public_metrics?.like_count, replies: post.public_metrics?.reply_count, reposts: post.public_metrics?.repost_count, quotes: post.public_metrics?.quote_count, bookmarks: post.public_metrics?.bookmark_count, impressions: post.public_metrics?.impression_count }, hashtags: post.entities?.hashtags?.map((item) => item.tag) ?? textHashtags, mentions: post.entities?.mentions?.map((item) => item.username) ?? textMentions, urls: post.entities?.urls?.map((item) => item.expanded_url ?? item.url).filter((value): value is string => Boolean(value)) ?? textUrls }; }
+}
+
+function userLookupCacheKey(input: unknown): string {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) return `x:user:${JSON.stringify(input)}`;
+  const record = input as { id?: unknown; username?: unknown };
+  const normalized = typeof record.username === 'string'
+    ? { ...record, username: normalizeUsername(record.username) }
+    : record;
+  return `x:user:${JSON.stringify(normalized)}`;
 }
 
 export interface PaginationOptions { maxResults?: number; paginationToken?: string; }
