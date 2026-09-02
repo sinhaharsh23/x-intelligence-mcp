@@ -7,6 +7,7 @@ import { SystemHealthCheck } from './health/system.health.js';
 import { AIModule } from './modules/ai/ai.module.js';
 import { DemoModule } from './modules/demo/demo.module.js';
 import { MCP_SERVER_DESCRIPTION, MCP_SERVER_NAME, MCP_SERVER_VERSION } from './common/compatibility.js';
+import { McpToolCompatibility } from './common/mcp-tool-compatibility.js';
 
 const demoCanvasMode = process.env.DEMO_CANVAS_MODE === 'true';
 
@@ -36,6 +37,6 @@ const demoCanvasMode = process.env.DEMO_CANVAS_MODE === 'true';
       ? [DemoModule]
       : [XModule, XOAuthModule.forRoot(), AnalyticsModule, IntelligenceModule, AIModule]),
   ],
-  providers: [SystemHealthCheck],
+  providers: [SystemHealthCheck, McpToolCompatibility],
 })
 export class AppModule {}

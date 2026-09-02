@@ -18,6 +18,11 @@ keeps the existing STDIO path for NitroStudio and the legacy `/sse` plus
 `/mcp/messages` compatibility routes for older MCP clients. No
 ChatGPT-specific or Claude-specific business logic is duplicated.
 
+Remote `tools/list` responses expose only standard MCP Tool fields. NitroStudio
+widget information remains available through `_meta`; legacy top-level widget
+fields are retained only on the local/STDIO presentation path so strict remote
+clients such as Claude do not reject the complete tool list.
+
 Supported protocol checks are `initialize`, `notifications/initialized`,
 `tools/list`, `tools/call`, `resources/list`, `resources/read`,
 `resources/templates/list`, and `prompts/list` where the client requests them.

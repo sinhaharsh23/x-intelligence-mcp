@@ -9,7 +9,8 @@ export async function runRemoteMcpDiagnostics({ endpoint = process.env.MCP_E2E_U
 
   const record = (name, status, details = {}) => checks.push({ name, status, ...details });
   const authHeaders = bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {};
-  const baseHeaders = { Accept: 'application/json, text/event-stream', 'MCP-Protocol-Version': PROTOCOL_VERSION, ...authHeaders };
+  const origin = process.env.MCP_ORIGIN ?? (clientName.includes('claude') ? 'https://claude.ai' : undefined);
+  const baseHeaders = { Accept: 'application/json, text/event-stream', 'MCP-Protocol-Version': PROTOCOL_VERSION, ...(origin ? { Origin: origin } : {}), ...authHeaders };
 
   async function fetchWithTimeout(url, options = {}) {
     const controller = new AbortController();
@@ -89,8 +90,17 @@ export async function runRemoteMcpDiagnostics({ endpoint = process.env.MCP_E2E_U
     const result = (await rpc('tools/list')).result;
     tools = result?.tools ?? [];
     const names = tools.map((tool) => tool.name);
-    const schemaProblems = tools.filter((tool) => !tool.name || !tool.description || tool.inputSchema?.type !== 'object').map((tool) => tool.name ?? 'unnamed');
-    record('tools/list', schemaProblems.length === 0 && names.length === new Set(names).size ? 'PASS' : 'FAIL', { toolCount: tools.length, duplicateNames: names.length - new Set(names).size, schemaProblems });
+    const schemaProblems = tools.flatMap((tool) => {
+      const problems = [];
+      if (!tool.name) problems.push('unnamed:name');
+      if (!tool.description) problems.push(`${tool.name ?? 'unnamed'}:description`);
+      if (tool.inputSchema?.type !== 'object') problems.push(`${tool.name ?? 'unnamed'}:inputSchema.type`);
+      if (tool.inputSchema?.required && (!Array.isArray(tool.inputSchema.required) || tool.inputSchema.required.some((field) => typeof field !== 'string' || !(field in (tool.inputSchema.properties ?? {}))))) problems.push(`${tool.name ?? 'unnamed'}:inputSchema.required`);
+      if ('widget' in tool || 'outputTemplate' in tool) problems.push(`${tool.name ?? 'unnamed'}:non-standard-top-level-widget-field`);
+      if (tool._meta !== undefined && (typeof tool._meta !== 'object' || tool._meta === null || Array.isArray(tool._meta))) problems.push(`${tool.name ?? 'unnamed'}:_meta`);
+      return problems;
+    });
+    record('tools/list', schemaProblems.length === 0 && names.length === new Set(names).size ? 'PASS' : 'FAIL', { toolCount: tools.length, firstToolNames: names.slice(0, 6), duplicateNames: names.length - new Set(names).size, schemaProblems });
   } catch {
     record('tools/list', 'FAIL');
   }
