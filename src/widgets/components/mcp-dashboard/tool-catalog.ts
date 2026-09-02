@@ -17,6 +17,12 @@ export type DashboardTool = {
   presentation: string;
 };
 
+export type DashboardResource = {
+  id: string;
+  label: string;
+  tone: string;
+};
+
 /** Mirrors the current bounded DemoModule registration; calls still go through the host RPC. */
 export const DEMO_TOOLS: DashboardTool[] = [
   { name: 'x_get_capabilities', category: 'STATUS', description: 'Configured X access and capability flags.', fields: [], presentation: 'Capability core' },

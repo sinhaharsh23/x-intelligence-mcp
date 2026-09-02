@@ -17,6 +17,7 @@
     "test:remote-mcp": "node scripts/test-remote-mcp.mjs",
     "test:chatgpt": "node scripts/test-chatgpt-compatibility.mjs",
     "test:claude": "node scripts/test-claude-compatibility.mjs",
+    "test:claude:tools": "node scripts/test-claude-tools.mjs",
     "test:nitrostudio": "npm run build && node scripts/test-nitrostudio-demo.mjs",
     "test:nitrostudio-demo": "npm run test:nitrostudio",
     "verify:demo-tools": "npm run build && node scripts/verify-demo-tools.mjs",
