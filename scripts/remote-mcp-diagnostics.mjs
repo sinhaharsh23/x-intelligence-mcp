@@ -130,7 +130,7 @@ export async function runRemoteMcpDiagnostics({ endpoint = process.env.MCP_E2E_U
     const code = errorCode(call, value);
     record('safe tools/call x_get_user', call?.isError ? 'EXTERNAL_BLOCKER' : 'PASS', { errorCode: code, returnedProfile: Boolean(value?.id || value?.username), mutationOccurred: false });
   } catch (error) {
-    record('safe tools/call x_get_user', 'FAIL', { message: 'Safe tool call could not complete', statusCode: error?.status });
+    record('safe tools/call x_get_user', error?.status === 401 ? 'AUTH_REQUIRED' : 'FAIL', { message: error?.status === 401 ? 'Bearer token required; set MCP_BEARER_TOKEN for authenticated diagnostics.' : 'Safe tool call could not complete', statusCode: error?.status });
   }
 
   if (tools?.some((tool) => tool.name === 'x_client_compatibility')) {
