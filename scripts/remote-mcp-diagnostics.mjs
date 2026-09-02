@@ -63,7 +63,7 @@ export async function runRemoteMcpDiagnostics({ endpoint = process.env.MCP_E2E_U
   try {
     const healthResponse = await fetchWithTimeout(`${endpoint}/health`, { headers: { Accept: 'application/json', ...authHeaders } });
     const health = parseBody(await healthResponse.text(), healthResponse.headers.get('content-type') ?? '');
-    record('HTTP connectivity', healthResponse.ok && health.transport === 'streamable-http' ? 'PASS' : 'FAIL', { statusCode: healthResponse.status, transport: health.transport });
+    record('HTTP connectivity', healthResponse.ok && health.transport === 'streamable-http' ? 'PASS' : healthResponse.status === 401 ? 'AUTH_REQUIRED' : 'FAIL', { statusCode: healthResponse.status, transport: health.transport });
   } catch (error) {
     record('HTTP connectivity', 'FAIL', { message: error instanceof Error ? error.message : 'Request failed' });
     return { endpoint, clientName, protocolVersion: PROTOCOL_VERSION, checks, overall: 'FAIL' };
@@ -71,7 +71,7 @@ export async function runRemoteMcpDiagnostics({ endpoint = process.env.MCP_E2E_U
 
   try {
     const initialized = await rpc('initialize', { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: clientName, version: '1.1.0' } });
-    record('initialize', initialized.result?.protocolVersion === PROTOCOL_VERSION ? 'PASS' : 'FAIL', { protocolVersion: initialized.result?.protocolVersion, session: Boolean(sessionId) });
+    record('initialize', initialized.result?.protocolVersion === PROTOCOL_VERSION && initialized.result?.serverInfo?.name === 'X Intelligence MCP' && initialized.result?.serverInfo?.version === '1.1.0' ? 'PASS' : 'FAIL', { protocolVersion: initialized.result?.protocolVersion, serverName: initialized.result?.serverInfo?.name, serverVersion: initialized.result?.serverInfo?.version, session: Boolean(sessionId) });
   } catch (error) {
     record('initialize', error?.status === 401 ? 'AUTH_REQUIRED' : 'FAIL', { statusCode: error?.status, message: error?.status === 401 ? 'Bearer token required; set MCP_BEARER_TOKEN for authenticated diagnostics.' : 'Initialize request failed' });
     return { endpoint, clientName, protocolVersion: PROTOCOL_VERSION, checks, overall: checks.at(-1).status === 'AUTH_REQUIRED' ? 'AUTH_REQUIRED' : 'FAIL' };
@@ -80,8 +80,8 @@ export async function runRemoteMcpDiagnostics({ endpoint = process.env.MCP_E2E_U
   try {
     const notification = await rpc('notifications/initialized', {}, { notification: true });
     record('notifications/initialized', notification.response.status === 202 || notification.response.status === 200 ? 'PASS' : 'FAIL', { statusCode: notification.response.status });
-  } catch {
-    record('notifications/initialized', 'FAIL');
+  } catch (error) {
+    record('notifications/initialized', error?.status === 401 ? 'AUTH_REQUIRED' : 'FAIL');
   }
 
   let tools;
@@ -99,29 +99,29 @@ export async function runRemoteMcpDiagnostics({ endpoint = process.env.MCP_E2E_U
     const result = (await rpc('resources/list')).result;
     const resources = result?.resources ?? [];
     record('resources/list', resources.every((resource) => resource.uri && resource.name) ? 'PASS' : 'FAIL', { resourceCount: resources.length });
-  } catch {
-    record('resources/list', 'FAIL');
+  } catch (error) {
+    record('resources/list', error?.status === 401 ? 'AUTH_REQUIRED' : 'FAIL');
   }
 
   try {
     const result = (await rpc('resources/read', { uri: 'health://checks' })).result;
     record('resources/read', Array.isArray(result?.contents) ? 'PASS' : 'FAIL', { contentCount: result?.contents?.length ?? 0 });
-  } catch {
-    record('resources/read', 'FAIL');
+  } catch (error) {
+    record('resources/read', error?.status === 401 ? 'AUTH_REQUIRED' : 'FAIL');
   }
 
   try {
     const result = (await rpc('resources/templates/list')).result;
     record('resources/templates/list', Array.isArray(result?.resourceTemplates) ? 'PASS' : 'FAIL', { templateCount: result?.resourceTemplates?.length ?? 0 });
-  } catch {
-    record('resources/templates/list', 'FAIL');
+  } catch (error) {
+    record('resources/templates/list', error?.status === 401 ? 'AUTH_REQUIRED' : 'FAIL');
   }
 
   try {
     const result = (await rpc('prompts/list')).result;
     record('prompts/list', Array.isArray(result?.prompts) ? 'PASS' : 'FAIL', { promptCount: result?.prompts?.length ?? 0 });
-  } catch {
-    record('prompts/list', 'FAIL');
+  } catch (error) {
+    record('prompts/list', error?.status === 401 ? 'AUTH_REQUIRED' : 'FAIL');
   }
 
   try {
@@ -133,12 +133,16 @@ export async function runRemoteMcpDiagnostics({ endpoint = process.env.MCP_E2E_U
     record('safe tools/call x_get_user', 'FAIL', { message: 'Safe tool call could not complete', statusCode: error?.status });
   }
 
-  try {
-    const call = (await rpc('tools/call', { name: 'x_client_compatibility', arguments: {} })).result;
-    const value = structured(call);
-    record('safe tools/call x_client_compatibility', call?.isError ? 'FAIL' : value?.remoteMcp === true && value?.clients?.chatgpt?.supported === true && value?.clients?.claude?.supported === true ? 'PASS' : 'FAIL', { returnedCompatibility: Boolean(value?.remoteMcp), mutationOccurred: false });
-  } catch {
-    record('safe tools/call x_client_compatibility', 'FAIL');
+  if (tools?.some((tool) => tool.name === 'x_client_compatibility')) {
+    try {
+      const call = (await rpc('tools/call', { name: 'x_client_compatibility', arguments: {} })).result;
+      const value = structured(call);
+      record('safe tools/call x_client_compatibility', call?.isError ? 'FAIL' : value?.remoteMcp === true && value?.clients?.chatgpt?.supported === true && value?.clients?.claude?.supported === true ? 'PASS' : 'FAIL', { returnedCompatibility: Boolean(value?.remoteMcp), mutationOccurred: false });
+    } catch (error) {
+      record('safe tools/call x_client_compatibility', error?.status === 401 ? 'AUTH_REQUIRED' : 'FAIL');
+    }
+  } else {
+    record('safe tools/call x_client_compatibility', 'DEMO_MODE', { reason: 'Production-only compatibility tool is intentionally excluded from the <=30-item Demo Canvas.' });
   }
 
   const failures = checks.filter((check) => check.status === 'FAIL');
