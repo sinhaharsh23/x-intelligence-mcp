@@ -8,6 +8,7 @@ import { AIModule } from './modules/ai/ai.module.js';
 import { DemoModule } from './modules/demo/demo.module.js';
 import { MCP_SERVER_DESCRIPTION, MCP_SERVER_NAME, MCP_SERVER_VERSION } from './common/compatibility.js';
 import { McpToolCompatibility } from './common/mcp-tool-compatibility.js';
+import { McpBoundaryDiagnostics } from './common/mcp-boundary-diagnostics.js';
 import { configuredAuth0Audiences, hasValidAuth0Issuer } from './common/config/auth0.js';
 import { getConfig } from './common/config/env.js';
 
@@ -46,6 +47,6 @@ const nitroStackAudience = auth0Audiences.length > 1
       ? [DemoModule]
       : [XModule, XOAuthModule.forRoot(), AnalyticsModule, IntelligenceModule, AIModule]),
   ],
-  providers: [SystemHealthCheck, McpToolCompatibility],
+  providers: [SystemHealthCheck, McpToolCompatibility, McpBoundaryDiagnostics],
 })
 export class AppModule {}
