@@ -83,7 +83,10 @@ function chunkToBuffer(chunk: unknown, encoding?: BufferEncoding): Buffer {
  */
 export function installStandardToolListResponse(app: ExpressLike): void {
   app.use((request, response, next) => {
-    if (request.method !== 'POST' || request.path !== '/mcp' || request.body?.method !== 'tools/list') {
+    const isMcpToolsList = request.method === 'POST'
+      && (request.path === '/mcp' || request.path === '/mcp/messages')
+      && request.body?.method === 'tools/list';
+    if (!isMcpToolsList) {
       next();
       return;
     }
