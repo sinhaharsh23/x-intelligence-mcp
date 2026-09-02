@@ -7,6 +7,7 @@ import { getConfig, resetConfigForTests } from '../dist/common/config/env.js';
 const envNames = [
   'NODE_ENV', 'HOST', 'MCP_TRANSPORT_TYPE', 'OAUTH_REQUIRED', 'RESOURCE_URI',
   'AUTH_SERVER_URL', 'TOKEN_AUDIENCE', 'TOKEN_ISSUER', 'JWKS_URI',
+  'AUTH0_AUDIENCE', 'AUTH0_AUDIENCES',
   'INTROSPECTION_ENDPOINT', 'INTROSPECTION_CLIENT_ID', 'INTROSPECTION_CLIENT_SECRET',
 ];
 
@@ -70,6 +71,17 @@ test('production accepts a complete JWKS verifier configuration', () => {
   });
 });
 
+test('production accepts the multi-audience setting without the legacy variable', () => {
+  withEnvironment({
+    ...productionJwks,
+    TOKEN_AUDIENCE: undefined,
+    AUTH0_AUDIENCES: 'https://mcp.example.test,https://claude.example.test',
+  }, () => {
+    delete process.env.TOKEN_AUDIENCE;
+    assert.doesNotThrow(() => assertProductionSecurity(getConfig()));
+  });
+});
+
 test('production accepts a complete opaque-token introspection configuration', () => {
   withEnvironment({
     NODE_ENV: 'production',
@@ -79,6 +91,7 @@ test('production accepts a complete opaque-token introspection configuration', (
     RESOURCE_URI: 'https://mcp.example.test',
     AUTH_SERVER_URL: 'https://auth.example.test',
     TOKEN_AUDIENCE: 'https://mcp.example.test',
+    TOKEN_ISSUER: 'https://auth.example.test/',
     INTROSPECTION_ENDPOINT: 'https://auth.example.test/oauth/introspect',
     INTROSPECTION_CLIENT_ID: 'mcp-server',
     INTROSPECTION_CLIENT_SECRET: 'test-only-secret',

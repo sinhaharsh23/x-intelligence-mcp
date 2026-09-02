@@ -27,6 +27,8 @@ const environmentSchema = z.object({
   APP_BASE_URL: optionalUrl,
   RESOURCE_URI: optionalUrl,
   AUTH_SERVER_URL: optionalUrl,
+  AUTH0_AUDIENCE: optionalString,
+  AUTH0_AUDIENCES: optionalString,
   TOKEN_AUDIENCE: z.string().optional(),
   TOKEN_ISSUER: optionalUrl,
   JWKS_URI: optionalUrl,

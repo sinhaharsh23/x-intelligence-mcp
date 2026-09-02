@@ -8,8 +8,16 @@ import { AIModule } from './modules/ai/ai.module.js';
 import { DemoModule } from './modules/demo/demo.module.js';
 import { MCP_SERVER_DESCRIPTION, MCP_SERVER_NAME, MCP_SERVER_VERSION } from './common/compatibility.js';
 import { McpToolCompatibility } from './common/mcp-tool-compatibility.js';
+import { configuredAuth0Audiences, hasValidAuth0Issuer } from './common/config/auth0.js';
+import { getConfig } from './common/config/env.js';
 
 const demoCanvasMode = process.env.DEMO_CANVAS_MODE === 'true';
+const auth0Audiences = configuredAuth0Audiences(getConfig());
+// NitroStack 1.0.15 types audience as string, while its RFC 8707 validator
+// accepts string[] at runtime. Pass the native multi-audience value through.
+const nitroStackAudience = auth0Audiences.length > 1
+  ? auth0Audiences as unknown as string
+  : auth0Audiences[0];
 
 @McpApp({
   module: AppModule,
@@ -30,8 +38,9 @@ const demoCanvasMode = process.env.DEMO_CANVAS_MODE === 'true';
       tokenIntrospectionEndpoint: process.env.INTROSPECTION_ENDPOINT,
       tokenIntrospectionClientId: process.env.INTROSPECTION_CLIENT_ID,
       tokenIntrospectionClientSecret: process.env.INTROSPECTION_CLIENT_SECRET,
-      audience: process.env.TOKEN_AUDIENCE,
+      audience: nitroStackAudience,
       issuer: process.env.TOKEN_ISSUER,
+      customValidation: (payload) => hasValidAuth0Issuer(payload, process.env.TOKEN_ISSUER),
     }),
     ...(demoCanvasMode
       ? [DemoModule]

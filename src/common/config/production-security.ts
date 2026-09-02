@@ -1,4 +1,5 @@
 import { getConfig, type AppConfig } from './env.js';
+import { configuredAuth0Audiences } from './auth0.js';
 
 /**
  * Production-only guard for the MCP trust boundary.
@@ -28,7 +29,9 @@ export function assertProductionSecurity(config: AppConfig = getConfig()): void 
   } else if (!isHttpsUrl(config.AUTH_SERVER_URL)) {
     failures.push('AUTH_SERVER_URL must be an HTTPS URL');
   }
-  if (!config.TOKEN_AUDIENCE) failures.push('TOKEN_AUDIENCE is required');
+  if (configuredAuth0Audiences(config).length === 0) {
+    failures.push('TOKEN_AUDIENCE or AUTH0_AUDIENCES is required');
+  }
 
   const hasJwks = Boolean(config.JWKS_URI);
   const hasIntrospection = Boolean(config.INTROSPECTION_ENDPOINT);
@@ -38,7 +41,7 @@ export function assertProductionSecurity(config: AppConfig = getConfig()): void 
   if (hasJwks && hasIntrospection) {
     failures.push('configure exactly one token verifier: JWKS_URI or INTROSPECTION_ENDPOINT');
   }
-  if (hasJwks && !config.TOKEN_ISSUER) failures.push('TOKEN_ISSUER is required with JWKS_URI');
+  if (!config.TOKEN_ISSUER) failures.push('TOKEN_ISSUER is required');
   if (hasIntrospection && (!config.INTROSPECTION_CLIENT_ID || !config.INTROSPECTION_CLIENT_SECRET)) {
     failures.push('INTROSPECTION_CLIENT_ID and INTROSPECTION_CLIENT_SECRET are required with INTROSPECTION_ENDPOINT');
   }

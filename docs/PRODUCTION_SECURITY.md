@@ -31,6 +31,8 @@ MCP_TRANSPORT_TYPE=dual
 OAUTH_REQUIRED=true
 RESOURCE_URI=https://mcp.example.com
 AUTH_SERVER_URL=https://auth.example.com
+# Preferred multi-audience setting. The legacy TOKEN_AUDIENCE remains supported.
+AUTH0_AUDIENCES=https://mcp.example.com,https://mcp.example.com/legacy
 TOKEN_AUDIENCE=https://mcp.example.com
 ```
 
@@ -62,7 +64,11 @@ OAuth discovery available for client negotiation. MCP execution requests
 (`tools/call`, `resources/read`, and `prompts/get`) require a valid bearer
 token, and invalid or missing credentials are rejected before handler
 execution. The token is checked by JWKS signature validation or RFC 7662
-introspection, including the configured audience.
+introspection, including every configured audience. For this application, the
+production compatibility pair is `https://x-intelligence-mcp` and
+`https://x-intelligence-mcp-6a95e036-xbuilders-srmist.app.nitrocloud.ai`.
+`TOKEN_ISSUER` remains `https://x-intelligence-mcp.au.auth0.com/`; issuer,
+expiration, signature (for JWTs), audience, and Bearer format remain validated.
 
 ## Secret management
 
