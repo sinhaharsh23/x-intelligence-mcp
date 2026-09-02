@@ -1,5 +1,13 @@
 # Deployment and release status
 
+## v1.1 multi-client release
+
+The server remains a single NitroStack application. Remote clients use the
+existing `/mcp` endpoint over Streamable HTTP; NitroStudio continues to use
+the existing dual/STDIO path and legacy SSE compatibility routes remain
+available. The compatibility tool is production-only so Demo Canvas stays at
+30 items or fewer.
+
 ## Current production status
 
 The application is deployed on NitroCloud from the connected private GitHub

@@ -6,18 +6,19 @@ import { XOAuthModule } from './modules/x/x-oauth.module.js';
 import { SystemHealthCheck } from './health/system.health.js';
 import { AIModule } from './modules/ai/ai.module.js';
 import { DemoModule } from './modules/demo/demo.module.js';
+import { MCP_SERVER_DESCRIPTION, MCP_SERVER_NAME, MCP_SERVER_VERSION } from './common/compatibility.js';
 
 const demoCanvasMode = process.env.DEMO_CANVAS_MODE === 'true';
 
 @McpApp({
   module: AppModule,
-  server: { name: 'x-intelligence-mcp', version: '1.0.0' },
+  server: { name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION },
   logging: { level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' },
   transport: { type: 'dual', http: { port: Number(process.env.PORT || 3000) } },
 })
 @Module({
   name: 'app',
-  description: 'X Intelligence MCP — an independent MCP integration using the official X API.',
+  description: MCP_SERVER_DESCRIPTION,
   imports: [
     ConfigModule.forRoot(),
     OAuthModule.forRoot({

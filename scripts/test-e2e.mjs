@@ -83,7 +83,7 @@ async function main() {
     const toolNames = tools.tools?.map((item) => item.name) ?? [];
     const duplicateTools = toolNames.length - new Set(toolNames).size;
     const invalidSchemas = (tools.tools ?? []).filter((item) => !item.inputSchema || typeof item.inputSchema !== 'object').length;
-    record('tools/list', toolNames.length === 66 && duplicateTools === 0 && invalidSchemas === 0 ? 'PASS' : 'FAIL', { toolCount: toolNames.length, duplicateNames: duplicateTools, invalidSchemas });
+    record('tools/list', toolNames.length === 67 && duplicateTools === 0 && invalidSchemas === 0 ? 'PASS' : 'FAIL', { toolCount: toolNames.length, duplicateNames: duplicateTools, invalidSchemas });
 
     const resources = await rpc('resources/list');
     const resourceUris = resources.resources?.map((item) => item.uri) ?? [];

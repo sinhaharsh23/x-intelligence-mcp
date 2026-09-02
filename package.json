@@ -1,9 +1,9 @@
 {
   "name": "x-intelligence-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "A native NitroStack MCP server for secure X API intelligence.",
+  "description": "AI-ready MCP server for interacting with X, retrieving real X data, and performing grounded AI analysis and content drafting.",
   "scripts": {
     "dev": "nitrostack-cli dev",
     "dev:http": "npm run build && MCP_TRANSPORT_TYPE=dual PORT=3000 HOST=127.0.0.1 NODE_ENV=development node dist/index.js",
@@ -14,6 +14,9 @@
     "integration:smoke": "npm run build && node dist/integration/smoke.js",
     "test:ai:integration": "npm run build && node scripts/test-ai-provider.mjs",
     "test:e2e": "node scripts/test-e2e.mjs",
+    "test:remote-mcp": "node scripts/test-remote-mcp.mjs",
+    "test:chatgpt": "node scripts/test-chatgpt-compatibility.mjs",
+    "test:claude": "node scripts/test-claude-compatibility.mjs",
     "test:nitrostudio": "npm run build && node scripts/test-nitrostudio-demo.mjs",
     "test:nitrostudio-demo": "npm run test:nitrostudio",
     "verify:demo-tools": "npm run build && node scripts/verify-demo-tools.mjs",

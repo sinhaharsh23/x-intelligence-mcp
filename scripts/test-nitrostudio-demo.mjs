@@ -112,7 +112,7 @@ async function inspectMode({ demo, port }) {
     const writesPresent = tools.some((tool) => /^(x_create|x_delete|x_reply|x_quote|x_like|x_unlike|x_repost|x_undo|x_follow|x_unfollow|x_upload)/.test(tool.name));
     const argumentFreeTools = tools.filter((tool) => (tool.inputSchema?.properties ? Object.keys(tool.inputSchema.properties).length : 0) === 0).map((tool) => tool.name);
     const incorrectlyArgumentFree = argumentFreeTools.filter((name) => !noArgumentTools.has(name));
-    const expectedToolCount = demo ? 21 : 66;
+    const expectedToolCount = demo ? 21 : 67;
     const canvasItems = tools.length + resources.length + prompts.length;
     const logCount = stderr.match(/initialized with \d+ tools, \d+ resources, \d+ prompts/)?.[0] ?? null;
     const result = {

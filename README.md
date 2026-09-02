@@ -1,6 +1,6 @@
 # X Intelligence MCP
 
-X Intelligence MCP is an independent, native NitroStack MCP server for securely reading, searching, analyzing, and managing real X content through the official X API v2. It is not affiliated with or endorsed by X.
+X Intelligence MCP is an AI-ready, native NitroStack MCP server for securely reading, searching, analyzing, and managing real X content through the official X API v2. It is not affiliated with or endorsed by X.
 
 ## Quick start
 
@@ -75,3 +75,11 @@ The NitroCloud deployment and Auth0-protected MCP boundary have been manually
 verified in production. Real app-only X reads, Groq generation, and grounded
 X-to-Groq analysis are working. X user OAuth remains implemented but disabled
 and deferred; X write operations have not been production-tested.
+
+## Remote clients
+
+The same production `/mcp` endpoint can be connected to NitroStudio, ChatGPT,
+Claude, and generic MCP clients using Streamable HTTP. See
+[docs/CHATGPT_MCP_SETUP.md](docs/CHATGPT_MCP_SETUP.md),
+[docs/CLAUDE_MCP_SETUP.md](docs/CLAUDE_MCP_SETUP.md), and
+[docs/MCP_CLIENT_COMPATIBILITY.md](docs/MCP_CLIENT_COMPATIBILITY.md).
